@@ -2,28 +2,54 @@
 
 ### 1. ¿Por qué dos especialistas y no uno solo? ¿Qué mejora y qué costo agrega?
 * **Por qué:** Porque dividir responsabilidades especializa las instrucciones y evita sobrecargar el contexto del modelo con reglas contradictorias (por ejemplo, separar el análisis de seguridad estricto de la orquestación general).
-* **Mejora:** Mayor precisión, mejor aislamiento de tareas y cumplimiento de restricciones de seguridad (como restringir al revisor de seguridad a solo lectura).
-* **Costo:** Agrega complejidad de coordinación y mayor overhead en la gestión de archivos de configuración y llamadas.
+* **Mejora:** Mayor precisión, mejor aislamiento de tareas y cumplimiento de restricciones de seguridad.
+* **Costo:** Agrega complejidad de coordinación y mayor overhead en la gestión de archivos de configuración.
+
+*(Vista general del flujo del equipo y agentes especialistas):*
+![Flujo del equipo](evidencias/parte1_flujo.png)
+
+---
 
 ### 2. ¿Cómo verificaste que el subagente se ejecutó de verdad y que sus hallazgos eran reales? ¿Qué harías si fallara?
-* **Verificación:** Revisando el output estructurado en la consola de Codex con los hallazgos detallados por línea, problema y severidad sobre `usuarios.py`, y comprobando mediante `git status` que el archivo de código original no fue alterado.
-* **Si fallara:** Revisaría la sintaxis del archivo TOML de configuración, verificaría los permisos del entorno de ejecución y consultaría los logs de error de la sesión para corregir las restricciones.
+* **Verificación:** Revisando el output estructurado en la consola con los hallazgos detallados sobre `usuarios.py`, y comprobando que el archivo original no fue alterado indebidamente.
+* **Si fallara:** Revisaría la sintaxis del archivo TOML de configuración y los permisos de ejecución.
+
+*(Evidencia de la invocación y ejecución real del subagente):*
+![Subagente ejecutándose](evidencias/parte2_subagente.png)
+
+![Llamada al subagente](evidencias/parte2_llamada.png)
+
+---
 
 ### 3. ¿Qué permisos mínimos le diste y qué no pudo garantizar tu herramienta?
-* **Permisos mínimos:** Se configuró el subagente para utilizar exclusivamente operaciones de lectura y búsqueda sobre el archivo indicado, deshabilitando la ejecución de código, accesos de red y modificaciones (`workspace-write`).
-* **Lo que no pudo garantizar de forma nativa:** El control automático de permisos dinámicos entre los modos de la sesión, lo que requirió adaptar explícitamente las directrices del archivo TOML para evitar bloqueos por herencia de estado `read-only`.
+* **Permisos mínimos:** Se configuró el subagente para utilizar exclusivamente operaciones de lectura y búsqueda (`workspace-read`), deshabilitando la escritura y ejecución directa.
+* **Lo que no pudo garantizar:** El control automático de permisos dinámicos entre los modos de la sesión, requiriendo directrices estrictas en el TOML.
+
+---
 
 ### 4. ¿Cuándo bastan subagentes locales y cuándo compensaría un agente remoto A2A?
-* **Subagentes locales:** Bastan cuando la tarea se ejecuta dentro del mismo entorno de desarrollo, compartiendo el mismo workspace y herramientas locales de forma síncrona.
-* **Agente remoto A2A:** Compensaría cuando se requiere integrar sistemas desacoplados que corren en servidores de terceros, arquitecturas de microservicios distribuidos o cuando se necesita delegar capacidades especializadas expuestas mediante protocolos de red independientes.
+* **Subagentes locales:** Bastan cuando la tarea se ejecuta dentro del mismo entorno de desarrollo y workspace de forma síncrona.
+* **Agente remoto A2A:** Compensaría cuando se requiere integrar sistemas desacoplados que corren en servidores externos o arquitecturas distribuidas.
+
+*(Diseño conceptual de la comunicación A2A):*
+![Diseño A2A](evidencias/parte3_a2a.png)
+
+---
 
 ### 5. ¿Cómo manejaría tu cliente `input-required` o un fallo de la Task?
-* **`input-required`:** El orquestador local pausaría el flujo de trabajo y levantaría una alerta interactiva o un componente en la interfaz para solicitar al usuario los datos faltantes o credenciales requeridas antes de continuar.
-* **Fallo de la Task (`failed`):** El cliente capturaría la excepción devuelta por el agente remoto, evaluaría si el error es transitorio para reintentar la solicitud o escalaría un reporte de fallo para la intervención humana.
+* **`input-required`:** El orquestador local pausaría el flujo de trabajo para solicitar al usuario los datos o aprobaciones faltantes antes de continuar.
+* **Fallo de la Task (`failed`):** El cliente capturaría la excepción, evaluaría un reintento o escalaría un reporte para intervención humana.
+
+---
 
 ### 6. ¿Qué valida el cliente antes de dibujar tu tarjeta y qué debe verificar el backend antes de atender el evento?
-* **El cliente valida:** Que el esquema UI recibido coincida con los componentes permitidos, que la estructura JSON sea válida y que los datos estén sanitizados para prevenir inyecciones visuales o fallos de renderizado.
-* **El backend valida:** La autenticación y autorización del usuario que emite el evento, la integridad de los parámetros enviados desde la interfaz y que la acción solicitada esté permitida dentro de los límites de seguridad del sistema.
+* **El cliente valida:** Que el esquema UI recibido coincida con los componentes permitidos y que los datos estén sanitizados.
+* **El backend valida:** La autenticación y autorización del usuario que emite el evento y la integridad de los parámetros.
+
+*(Diseño de la interfaz generativa A2UI):*
+![Interfaz A2UI](evidencias/parte4_interfaz.png)
+
+---
 
 ### 7. ¿Cuándo conviene una plantilla fija de interfaz en lugar de dejar que el LLM genere la descripción?
-Conviene una plantilla fija cuando la estructura visual es crítica, repetitiva o requiere un diseño estricto y predecible (como formularios de pago, paneles de control corporativos o alertas del sistema) donde un componente generado dinámicamente por el LLM podría introducir inconsistencias visuales o errores de renderizado.
+Conviene una plantilla fija cuando la estructura visual es crítica, repetitiva o requiere un diseño estricto y predecible (como formularios de pago o paneles de control) donde un componente generado dinámicamente por el LLM podría introducir inconsistencias visuales.
